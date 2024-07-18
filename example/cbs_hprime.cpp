@@ -6,7 +6,7 @@
 
 #include <yaml-cpp/yaml.h>
 
-#include <libMultiRobotPlanning/cbs.hpp>
+#include <libMultiRobotPlanning/cbs_hprime.hpp>
 #include "timer.hpp"
 
 using libMultiRobotPlanning::CBS;
@@ -286,7 +286,8 @@ class Environment {
     return s.x == m_goals[m_agentIdx].x && s.y == m_goals[m_agentIdx].y &&
            s.time > m_lastGoalConstraint;
   }
-
+  int getDimX() const { return m_dimx; }
+  int getDimY() const { return m_dimy; }
   void getNeighbors(const State& s,
                     std::vector<Neighbor<State, Action, int> >& neighbors) {
     // std::cout << "#VC " << constraints.vertexConstraints.size() << std::endl;
@@ -553,7 +554,7 @@ class Environment {
     for (size_t i = 0; i < m_goals.size(); ++i) {
       m_heuristic[i].assign(m_dimx * m_dimy, std::numeric_limits<int>::max());
       HeuristicEnvironment henv(m_dimx, m_dimy, m_obstacles, &m_heuristic[i]);
-      AStar<Location, Action, int, HeuristicEnvironment> astar(henv);
+      AStarHPrime<Location, Action, int, HeuristicEnvironment> astar(henv);
       PlanResult<Location, Action, int> dummy;
       astar.search(m_goals[i], dummy);
       m_heuristic[i][m_goals[i].x + m_dimx * m_goals[i].y] = 0;
@@ -575,7 +576,6 @@ class Environment {
 };
 
 int main(int argc, char* argv[]) {
-  std::cout << "CBS_START" << std::endl;
   namespace po = boost::program_options;
   // Declare the supported options.
   po::options_description desc("Allowed options");
@@ -614,6 +614,30 @@ int main(int argc, char* argv[]) {
   const auto& dim = config["map"]["dimensions"];
   int dimx = dim[0].as<int>();
   int dimy = dim[1].as<int>();
+
+  // std::cout << "Map dimensions: " << dim[0].as<int>() << "x" <<
+  // dim[1].as<int>()
+  //           << std::endl;
+
+  // // Print obstacles
+  // std::cout << "Obstacles:" << std::endl;
+  // for (const auto& node : config["map"]["obstacles"]) {
+  //   std::cout << "  (" << node[0].as<int>() << ", " << node[1].as<int>() <<
+  //   ")"
+  //             << std::endl;
+  // }
+
+  // // Print agents' start and goal positions
+  // std::cout << "Agents:" << std::endl;
+  // for (const auto& node : config["agents"]) {
+  //   const auto& start = node["start"];
+  //   const auto& goal = node["goal"];
+  //   std::cout << "  Start: (" << start[0].as<int>() << ", "
+  //             << start[1].as<int>() << ")"
+  //             << "  Goal: (" << goal[0].as<int>() << ", " <<
+  //             goal[1].as<int>()
+  //             << ")" << std::endl;
+  // }
 
   for (const auto& node : config["map"]["obstacles"]) {
     obstacles.insert(Location(node[0].as<int>(), node[1].as<int>()));

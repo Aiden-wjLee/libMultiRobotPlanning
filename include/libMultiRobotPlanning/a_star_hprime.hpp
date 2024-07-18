@@ -1,3 +1,4 @@
+
 #pragma once
 
 #ifdef USE_FIBONACCI_HEAP
@@ -55,12 +56,14 @@ purposes.
    std::hash<State>
 */
 template <typename State, typename Action, typename Cost, typename Environment,
-          typename StateHasher = std::hash<State> >
-class AStar {
+          typename StateHasher = std::hash<State>>
+class AStarHPrime {
  public:
-  AStar(Environment& environment) : m_env(environment) {}
+  AStarHPrime(Environment& environment) : m_env(environment) {}
   bool search(const State& startState,
-              PlanResult<State, Action, Cost>& solution, Cost initialCost = 0) {
+              PlanResult<State, Action, Cost>& solution,
+              std::vector<std::vector<std::vector<int>>>& trace_paths,
+              Cost initialCost = 0) {
     solution.states.clear();
     solution.states.push_back(std::make_pair<>(startState, 0));
     solution.actions.clear();
@@ -78,7 +81,7 @@ class AStar {
     stateToHeap.insert(std::make_pair<>(startState, handle));
     (*handle).handle = handle;
 
-    std::vector<Neighbor<State, Action, Cost> > neighbors;
+    std::vector<Neighbor<State, Action, Cost>> neighbors;
     neighbors.reserve(10);
 
     while (!openSet.empty()) {
@@ -115,14 +118,37 @@ class AStar {
       for (const Neighbor<State, Action, Cost>& neighbor : neighbors) {
         if (closedSet.find(neighbor.state) ==
             closedSet.end()) {  // Not in closed set
-          Cost tentative_gScore = current.gScore + neighbor.cost;
+          float tentative_gScore = (float)current.gScore + (float)neighbor.cost;
           if (neighbor.cost != 1) {
             std::cout << "[error]neighbor.cost: " << neighbor.cost << std::endl;
           }
           auto iter = stateToHeap.find(neighbor.state);
           if (iter == stateToHeap.end()) {  // Discover a new node
-            Cost fScore =
-                tentative_gScore + m_env.admissibleHeuristic(neighbor.state);
+            // if Cost.type == float
+            float hprime = 0.0;
+            if (trace_paths.size() > 0 &&
+                neighbor.state.time < static_cast<int>(trace_paths.size()) &&
+                std::any_of(
+                    trace_paths.begin() + std::max(0, neighbor.state.time - 7),
+                    trace_paths.begin() +
+                        std::min(static_cast<int>(trace_paths.size()),
+                                 neighbor.state.time + 2),
+                    [&](const auto& time_slice) {
+                      return time_slice[neighbor.state.x][neighbor.state.y] > 0;
+                    })) {
+              float num = trace_paths[neighbor.state.time][neighbor.state.x]
+                                     [neighbor.state.y];
+              float sigmoid_num = 1 / (1 + exp(-num)) / 10.0;
+              hprime = 0.999 - (0.499 - sigmoid_num * 0.499);
+            } else if (neighbor.state.y == current.state.y &&
+                       neighbor.state.x != current.state.x) {
+              hprime = 0.0;
+            } else {
+              hprime = 0.5;
+            }
+            float fScore = tentative_gScore +
+                           (float)m_env.admissibleHeuristic(neighbor.state) +
+                           hprime;
             auto handle =
                 openSet.push(Node(neighbor.state, fScore, tentative_gScore));
 
@@ -141,8 +167,8 @@ class AStar {
             }
 
             // update f and gScore
-            Cost delta = (*handle).gScore - tentative_gScore;
-            (*handle).gScore = tentative_gScore;
+            float delta = (float)(*handle).gScore - (float)tentative_gScore;
+            (*handle).gScore = (float)tentative_gScore;
             (*handle).fScore -= delta;
             openSet.increase(handle);
             m_env.onDiscover(neighbor.state, (*handle).fScore,
@@ -166,7 +192,7 @@ class AStar {
 
  private:
   struct Node {
-    Node(const State& state, Cost fScore, Cost gScore)
+    Node(const State& state, float fScore, float gScore)
         : state(state), fScore(fScore), gScore(gScore) {}
 
     bool operator<(const Node& other) const {
@@ -190,14 +216,14 @@ class AStar {
 
     State state;
 
-    Cost fScore;
-    Cost gScore;
+    float fScore;
+    float gScore;
 
 #ifdef USE_FIBONACCI_HEAP
     typename boost::heap::fibonacci_heap<Node>::handle_type handle;
 #else
     typename boost::heap::d_ary_heap<Node, boost::heap::arity<2>,
-                                     boost::heap::mutable_<true> >::handle_type
+                                     boost::heap::mutable_<true>>::handle_type
         handle;
 #endif
   };
@@ -207,7 +233,7 @@ class AStar {
   typedef typename openSet_t::handle_type fibHeapHandle_t;
 #else
   typedef typename boost::heap::d_ary_heap<Node, boost::heap::arity<2>,
-                                           boost::heap::mutable_<true> >
+                                           boost::heap::mutable_<true>>
       openSet_t;
   typedef typename openSet_t::handle_type fibHeapHandle_t;
 #endif

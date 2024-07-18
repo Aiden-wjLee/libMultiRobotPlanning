@@ -4,9 +4,9 @@
 #include <boost/functional/hash.hpp>
 #include <boost/program_options.hpp>
 
-#include <libMultiRobotPlanning/a_star_epsilon.hpp>
+#include <libMultiRobotPlanning/a_star_hprime.hpp>
 
-using libMultiRobotPlanning::AStarEpsilon;
+using libMultiRobotPlanning::AStarHPrime;
 using libMultiRobotPlanning::Neighbor;
 using libMultiRobotPlanning::PlanResult;
 
@@ -82,18 +82,6 @@ class Environment {
     return std::abs(s.x - m_goal.x) + std::abs(s.y - m_goal.y);
   }
 
-  // a potentially inadmissible heuristic
-  int focalStateHeuristic(const State& /*s*/, int gScore) {
-    // prefer lower g-values
-    return gScore;
-  }
-
-  int focalTransitionHeuristic(const State& /*s1*/, const State& /*s2*/,
-                               int gScoreS1, int gScoreS2) {
-    // prefer lower g-values
-    return gScoreS2 - gScoreS1;
-  }
-
   bool isSolution(const State& s) { return s == m_goal; }
 
   void getNeighbors(const State& s,
@@ -145,7 +133,6 @@ int main(int argc, char* argv[]) {
   int startX, startY, goalX, goalY;
   std::string mapFile;
   std::string outputFile;
-  float w;
   desc.add_options()("help", "produce help message")(
       "startX", po::value<int>(&startX)->required(),
       "start position x-component")("startY",
@@ -155,8 +142,7 @@ int main(int argc, char* argv[]) {
       "goalY", po::value<int>(&goalY)->required(), "goal position y-component")(
       "map,m", po::value<std::string>(&mapFile)->required(), "input map (txt)")(
       "output,o", po::value<std::string>(&outputFile)->required(),
-      "output file (YAML)")("suboptimality,w", po::value<float>(&w)->required(),
-                            "suboptimality factor");
+      "output file (YAML)");
 
   try {
     po::variables_map vm;
@@ -199,7 +185,7 @@ int main(int argc, char* argv[]) {
   State start(startX, startY);
   Environment env(dimX, y - 1, obstacles, goal);
 
-  AStarEpsilon<State, Action, int, Environment> astar(env, w);
+  AStar<State, Action, int, Environment> astar(env);
 
   PlanResult<State, Action, int> solution;
 

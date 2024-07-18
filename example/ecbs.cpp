@@ -257,9 +257,7 @@ class Environment {
         m_lastGoalConstraint(-1),
         m_highLevelExpanded(0),
         m_lowLevelExpanded(0),
-        m_disappearAtGoal(disappearAtGoal)
-  {
-  }
+        m_disappearAtGoal(disappearAtGoal) {}
 
   Environment(const Environment&) = delete;
   Environment& operator=(const Environment&) = delete;
@@ -498,7 +496,7 @@ class Environment {
       // This is a trick to avoid changing the rest of the code significantly
       // After an agent disappeared, put it at a unique but invalid position
       // This will cause all calls to equalExceptTime(.) to return false.
-      return State(-1, -1 * (agentIdx+1), -1);
+      return State(-1, -1 * (agentIdx + 1), -1);
     }
     return solution[agentIdx].states.back().first;
   }
@@ -546,7 +544,8 @@ int main(int argc, char* argv[]) {
                            "output file (YAML)")(
       "suboptimality,w", po::value<float>(&w)->default_value(1.0),
       "suboptimality bound")(
-      "disappear-at-goal", po::bool_switch(&disappearAtGoal), "make agents to disappear at goal rather than staying there");
+      "disappear-at-goal", po::bool_switch(&disappearAtGoal),
+      "make agents to disappear at goal rather than staying there");
 
   try {
     po::variables_map vm;
@@ -589,11 +588,13 @@ int main(int argc, char* argv[]) {
   std::unordered_set<State> startStatesSet;
   for (const auto& s : startStates) {
     if (startStatesSet.find(s) != startStatesSet.end()) {
-      std::cout << "Identical start states detected -> no solution!" << std::endl;
+      std::cout << "Identical start states detected -> no solution!"
+                << std::endl;
       return 0;
     }
     startStatesSet.insert(s);
   }
+  std::cout << "disappearAtGoal: " << disappearAtGoal << std::endl;
 
   Environment mapf(dimx, dimy, obstacles, goals, disappearAtGoal);
   ECBS<State, Action, int, Conflict, Constraints, Environment> ecbs(mapf, w);

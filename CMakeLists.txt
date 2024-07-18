@@ -130,6 +130,14 @@ target_link_libraries(cbs
   yaml-cpp
 )
 
+add_executable(cbs_hprime
+  example/cbs_hprime.cpp
+)
+target_link_libraries(cbs_hprime
+  ${Boost_LIBRARIES}
+  yaml-cpp
+)
+
 ## cbs_ta
 add_executable(cbs_ta
   example/cbs_ta.cpp
